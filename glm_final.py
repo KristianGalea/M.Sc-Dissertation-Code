@@ -14,19 +14,15 @@ import os
 import nilearn
 import nibabel as nib
 import argparse
-import re
 import ants
 
 # nilearn subpackages
 from nilearn.plotting import plot_design_matrix
-from nilearn.glm.first_level import make_first_level_design_matrix
-from nilearn.glm.second_level import make_second_level_design_matrix
 from nilearn.glm.first_level import FirstLevelModel
-from nilearn import image, datasets
-from nilearn.image import concat_imgs, mean_img
+from nilearn import image
 from nilearn import image
 from nilearn.plotting import plot_contrast_matrix
-from nilearn.plotting import plot_anat, plot_img, plot_stat_map
+from nilearn.plotting import plot_stat_map
 from nilearn.glm import threshold_stats_img
 from templateflow import api as tflow
 
@@ -135,21 +131,20 @@ def events_tsv_func(psychopy_log_file, voxel_size, subject, task, verbose):
 
     return events_tsv_df
 
-"""Creating the GLM model. This first function performs the GLM on non-smoothed data."""
+"""First-level GLM"""
 
 def first_level_glm(func_path, struct_path, events_tsv, tr, voxel_size, subject, smooth, analysis_type, thr, contrast, task, verbose, fw):
 
   '''
-  Defining a function that computes the GLM using nilearn and outputs the statistical
-  z-maps and the FirstLevelModel object which is used to compute the group level analysis
-  for multiple subject analysis.
+  Defining a function that computes the GLM using nilearn and outputs the unthresholded statistical 
+  t-maps used to compute the group level analysis for multiple subject analysis. In addition, the Bonferroni
+  corrected individual statistical maps are also computed.
   '''
 
   print(f"- Running the first level GLM analysis on subject {subject} for {voxel_size}mm^3 resolution")
 
   # Loading the images
   func_image = image.load_img(func_path)
-  mean_func = image.mean_img(func_image)
   struct_image = image.load_img(struct_path)
 
   # will the data be smoothed?
@@ -245,7 +240,7 @@ def first_level_glm(func_path, struct_path, events_tsv, tr, voxel_size, subject,
       condition["rest"][0] = -1
       contrast_vector = condition["task"] + condition["rest"]
 
-  #Calculating the z-map of the contrasts
+  #Calculating the t-map of the contrasts
   statmap = fmri_glm.compute_contrast(contrast_vector, stat_type='t', output_type='stat')
   output_statmap = '{}_stat_map_sub-{}_{}mm_{}.nii.gz'.format(smooth_text, subject, voxel_size, task_text)
   nib.save(statmap, output_statmap)
@@ -271,7 +266,6 @@ def first_level_glm(func_path, struct_path, events_tsv, tr, voxel_size, subject,
         black_bg=True,
         cmap='jet',
         title=f"{task_text} (p<{thr}, Bonferroni-corrected), threshold: {threshold:.3f}",)
-    #x.close()
     x.savefig("{}_bonferronni_map_sub-{}_{}mm_{}.pdf".format(smooth_text, subject, voxel_size, task_text))
 
   if analysis_type == 1:
@@ -292,7 +286,6 @@ def first_level_glm(func_path, struct_path, events_tsv, tr, voxel_size, subject,
         black_bg=True,
         cmap='jet',
         title=f"{task_text} (fdr={thr}), threshold: {threshold:.3f}",)
-    #x.close()
     x.savefig("{}_fdr_map_sub-{}_{}mm_{}.pdf".format(smooth_text, subject, voxel_size, task_text))
 
   if analysis_type == 2:
@@ -314,7 +307,6 @@ def first_level_glm(func_path, struct_path, events_tsv, tr, voxel_size, subject,
         black_bg=True,
         cmap='jet',
         title=f"{task_text} (fdr={thr}), threshold: {threshold:.3f}, clusters > 10 voxels",)
-    #x.close()
     x.savefig("{}_fdr_clustered_map_sub-{}_{}mm_{}.pdf".format(smooth_text, subject, voxel_size, task_text))
 
     print(f"- First level analysis on subject {subject} at {voxel_size}mm^3 done")
@@ -392,7 +384,6 @@ def first_level_glm(func_path, struct_path, events_tsv, tr, voxel_size, subject,
         plt.savefig("{}_expected_response_task_rest-{}_{}mm.png".format(smooth_text, subject, voxel_size))
         plt.close()
 
-
       #Plotting the contrast plot
       plot_contrast_matrix(contrast_vector, design_matrix=design_matrix)
       plt.savefig("{}_contrast_matrix_sub-{}_{}mm.png".format(smooth_text, subject, voxel_size))
@@ -428,7 +419,7 @@ def second_level_glm(second_level_input, thr, mni_image, voxel_size, slsm):
                                             memory_level=1, verbose=0,
                                             n_jobs=1, minimize_memory=True)
 
-  # The following function takes a second_level_input as a list of z-maps for the different subjects
+  # The following function takes a second_level_input as a list of r-maps for the different subjects
   second_level_model = second_level_model.fit(second_level_input, design_matrix=design_matrix)
 
   # Computing the contrasts for the second level analysis: One sample testing with non-parametric multiple comparisons correction
@@ -462,7 +453,7 @@ def second_level_glm(second_level_input, thr, mni_image, voxel_size, slsm):
 
 def normalisation_mni(map, transform_path, reference_image_path):
   """
-  The function normalises the z-map outputted in the first level model to the
+  The function normalises the t-map outputted in the first level model to the
   MNI space. This is achieved using the transformation object outputted by
   fMRIprep. The file name is given by T1w_target-MNI152NLin2009cAsym_warp.h5.
   """
@@ -487,7 +478,7 @@ def main():
         'The first-level argument may be used to run a first level GLM analysis,'
         'while second-level argument may be used to run a group level GLM analysis.'
         'Finally the normalise argument may be used to spatially normalise the'
-        'output (z-maps) of the first level analysis to the MNI template so that'
+        'output (t-maps) of the first level analysis to the MNI template so that'
         'a group level analysis may be performed.',
 
         formatter_class=argparse.RawTextHelpFormatter
@@ -517,14 +508,14 @@ def main():
     first_level.add_argument('-ts', '--task', action='store_true', help='Do you want to analyse thumb and index separately? by default, thumb, index events are grouped. If this is activated, contrast needs to be set to 1,2 or 3', default=False)
     first_level.add_argument('-ver', '--verbose', action='store_true', help='Outputs a number of plots related to GLM design', default=False)
 
-    # Normalisation of the z-maps to a standard MNI template
-    normalisation = subparsers.add_parser('normalise', help='Normalises the z-map outputted in the first level analysis to the standard MNI template')
-    normalisation.add_argument('-s', '--s_maps', type=str, help='Path to the z-maps outputted during the first level analysis')
+    # Normalisation of the t-maps to a standard MNI template
+    normalisation = subparsers.add_parser('normalise', help='Normalises the t-map outputted in the first level analysis to the standard MNI template')
+    normalisation.add_argument('-s', '--s_maps', type=str, help='Path to the t-maps outputted during the first level analysis')
     normalisation.add_argument('-t', '--transform', type=str, help='Path to the transform outputted by fMRIprep in the /anat directory: e.g. T1w_target-MNI152NLin2009cAsym_warp.h5')
     normalisation.add_argument('-rf', '--reference_img', type=str, help='Path to the T1w image normalised to MNI found in the /anat directory')
 
     # Second level (group level) analysis arguments - NOT REQUIRED TO RUN THE ALGORITHM
-    second_level = subparsers.add_parser('second-level', help='Performs second level analysis using the z-maps outputted by the first level analysis. The z-maps need to be normalised to MNI space')
+    second_level = subparsers.add_parser('second-level', help='Performs second level analysis using the t-maps outputted by the first level analysis. The t-maps need to be normalised to MNI space')
     second_level.add_argument('-s', '--s_maps', type=str, nargs='+', help='list containing the paths to the spatially normalised statistical maps of the volunteers', required=True)
     second_level.add_argument('-thr', '--alpha_threshold', type=float, help='The statistical threshold alpha, default = 0.05', default=0.05)
     second_level.add_argument('-mn', '--mni_img', type=str, help='The path to the MNI image', default=None)
