@@ -5,7 +5,7 @@
 
 
 import numpy as np
-from nilearn.image import binarize_img
+import nibabel as nib
 import argparse
 
 # In[2]:
@@ -20,22 +20,26 @@ def binarise_maps(input_image, threshold):
     input_image: the path to the image
     threshold: the threshold which will be used to binarise the img
     """
-    binary_image = binarize_img(input_image, threshold=threshold, two_sided=False)
+    img = nib.load(input_image)
+    img = img.get_fdata()
+
+    binary_image = np.zeros_like(img)
+
+    binary_image[img>=threshold] = 1
+    binary_image[img<threshold] = 0 
     return binary_image
 
 
 # In[3]:
 
 
-def dice_coefficient(binary_image_1, binary_image_2):
+def dice_coefficient(binary_image_data_1, binary_image_data_2):
     """
     Calculates the Dice coefficient which quantifies the degree 
     of similarity between the two activation maps. The function
     takes 2 binary images as inputs and outputs the dice
     coefficient.
     """
-    binary_image_data_1 = binary_image_1.get_fdata()
-    binary_image_data_2 = binary_image_2.get_fdata()
 
     # Number of activated voxels in each image
     n_activations_1 = np.sum(binary_image_data_1)
@@ -53,14 +57,12 @@ def dice_coefficient(binary_image_1, binary_image_2):
 # In[4]:
 
 
-def jaccard_index(binary_image_1, binary_image_2):
+def jaccard_index(binary_image_data_1, binary_image_data_2):
     """
     Calculates the Jaccard index which quantifies the degree 
     of similarity between the two activation maps. The function
     takes 2 binary images as inputs and outputs the Jaccard index.
     """
-    binary_image_data_1 = binary_image_1.get_fdata()
-    binary_image_data_2 = binary_image_2.get_fdata()
 
     # Number of activated voxels in each image
     n_activations_1 = np.sum(binary_image_data_1)
@@ -78,7 +80,7 @@ def jaccard_index(binary_image_1, binary_image_2):
 # In[5]:
 
 
-def overlap_coefficient(binary_image_1, binary_image_2):
+def overlap_coefficient(binary_image_data_1, binary_image_data_2):
     """
     Calculates the ratio of the intersection of the two binary images relative
     to the number of activated voxels in binary image containing the smallest
@@ -87,9 +89,6 @@ def overlap_coefficient(binary_image_1, binary_image_2):
     Hence, this metric may be used to quantify the proportion of the GLM's 
     activation map that was deemed significantly active by the VB index.
     """
-    
-    binary_image_data_1 = binary_image_1.get_fdata()
-    binary_image_data_2 = binary_image_2.get_fdata()
 
     # Number of activated voxels in each image
     n_activations_1 = np.sum(binary_image_data_1)
