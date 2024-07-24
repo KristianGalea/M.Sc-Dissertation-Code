@@ -39,3 +39,15 @@ The code used to perform statistical testing with the VB index is the "vb_statis
 ```
 python3 vb_statistical_final.py -pvb $path_to_folder_containing_vb_data$ -vv 1.8 -sm 3 -lb smoothing_3
 ```
+
+## Spatial similarity of activation maps
+The spatial similarity of the activation maps obtained with the for example second level GLM or the VB analysis may be assessed using the Jaccard_Dice_coefficient.py file to compute the Jaccard index, Dice coefficient or overlap coefficient between two input activation maps. The code first binarises the input activation maps using a user-specified threshold (default = 0). The threshold may be for example the Bonferroni corrected t-value for p<0.05 as outputted by the GLM and VB algorithm previosly.
+
+### Example: Computing the Jaccard index of two activation maps
+```
+python3 Jaccard_Dice_coefficient.py -sm1 $path_to_activation_map1$ -sm2 $path_to_activation_map2$ -thr1 5.2 -thr2 5.4 
+```
+### Example: Computing the Jaccard index, Dice coefficient and overlap coefficient of two activation maps
+```
+python3 Jaccard_Dice_coefficient.py -sm1 $path_to_activation_map1$ -sm2 $path_to_activation_map2$ -cf 4 -thr1 5.2 -thr2 5.4 
+```
