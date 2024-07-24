@@ -1,5 +1,11 @@
 # M.Sc-Disserrtation-Code
 
+## Installing the python packages needed
+The python packages required to run both the glm_final.py and the vb_statistical_final.py code may be installed using the requirements.txt. To install via pip, run the following:
+```
+pip install -r requirements.txt
+```
+
 ## General Linear Model
 The code used to run the GLM analysis is the "glm_final.py" file. The file may be run via the command line and may perform two separate GLM analysis. Firslty, it can perform a subject level "first-level" analysis. In addition to this it may also perform a group-level "second-level analysis". The code also has the capability of spatially normalising the first-level results to MNI space which is required to perform the second level analysis. 
 
