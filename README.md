@@ -1,4 +1,4 @@
-# M.Sc-Disserrtation-Code
+# M.Sc-Dissertation-Code
 
 ## Installing the python packages needed
 The python packages required to run both the glm_final.py and the vb_statistical_final.py code may be installed using the requirements.txt. To install via pip, run the following:
